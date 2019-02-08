@@ -1,4 +1,4 @@
-# LinuxServerSetupScript
+# LinuxServerSetup
 
 ## Script for setting up a complete server system
 Debian or compatible distrobution
@@ -22,9 +22,9 @@ Debian or compatible distrobution
 Get it and run it
 
 ```
-wget --no-check-certificate https://api.github.com/repos/TirsvadCMS/LinuxServerSetupScript/tarball/master
-tar xpvf master -C "LinuxServerSetupScript" --strip-components=1
-cd LinuxServerSetupScript
+wget --no-check-certificate https://api.github.com/repos/TirsvadCMS/LinuxServerSetup/tarball/master
+tar xpvf master -C "LinuxServerSetup" --strip-components=1
+cd LinuxServerSetup
 bash setup/start.sh
 ```
 
