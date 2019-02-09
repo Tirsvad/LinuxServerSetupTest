@@ -3,6 +3,10 @@
 . setup/sslcertificate.sh
 . setup/nginx.sh
 
+if [ -z "${NONINTERACTIVE:-}" ]; then
+    . setup/questions.sh
+fi
+
 printf "\n\n"
 
 if [[ ! -z "${PRIMARY_HOSTNAME:-}" ]]; then
@@ -44,7 +48,7 @@ if  [ ! $USEREXIST -eq 0  ]; then
         chmod 0600 "$USER_HOME/.ssh/authorized_keys"
     fi
     infoscreendone
-    if [ $SSHD_PASSWORDAUTH=="off" ] && [ -z ${USER_SSHKEY:-} ]; then
+    if [ $SSHD_PASSWORDAUTH == "off" ] && [ -z ${USER_SSHKEY:-} ]; then
     dialog --title "copy client " \
         --colors \
         --msgbox \
@@ -58,8 +62,8 @@ else
 fi
 
 infoscreen "securing" "sshd"
-update_param_boolean "/etc/ssh/sshd_config" "PermitRootLogin" "${SSHD_PERMITROOTLOGIN}"
-update_param_boolean "/etc/ssh/sshd_config" "PasswordAuthentication" "${SSHD_PASSWORDAUTH}"
+update_param_boolean "/etc/ssh/sshd_config" "PermitRootLogin" "$SSHD_PERMITROOTLOGIN"
+update_param_boolean "/etc/ssh/sshd_config" "PasswordAuthentication" "$SSHD_PASSWORDAUTH"
 systemctl reload sshd
 infoscreendone
 
@@ -75,7 +79,7 @@ infoscreen "installing" "firewall"
     hide_output ufw --force enable
 infoscreendone
 
-if [ ${SOFTWARE_INSTALL_AJENTI:-} == "on" ] ; then
+if [ "$SOFTWARE_INSTALL_AJENTI" == "on" ]; then
     infoscreen "installing" "Ajenti control panel"
     case $OS in
     "Debian GNU/Linux")
@@ -99,13 +103,13 @@ if [ ${SOFTWARE_INSTALL_AJENTI:-} == "on" ] ; then
     hide_output systemctl enable ajenti
     hide_output systemctl restart ajenti
     hide_output ufw allow 8000
-    STR="\n${WHITE}Ajenti will listen on HTTPS port 8000 by default \nDefault username : root \nDefault password : admin\nhttps://${PUBLIC_IP}:8000\n\n"
+    STR="${WHITE}Ajenti will listen on HTTPS port 8000 by default \nDefault username : root \nDefault password : admin\nhttps://${PUBLIC_IP}:8000"
     MSGBOX+=($STR)
     infoscreendone
 fi
 
-if [ ${SOFTWARE_INSTALL_NGINX:-} == "on" ] ; then
-    infoscreen "Installing" "NGINX Webserver"
+if [ "${SOFTWARE_INSTALL_NGINX:-}" == "on" ]; then
+    infoscreen "Installing" "nginx Webserver"
     apt_get_quiet install nginx python-certbot-nginx
 
     mkdir -p /var/www/letsencrypt/.well-known/acme-challenge
@@ -123,6 +127,26 @@ if [ ${SOFTWARE_INSTALL_NGINX:-} == "on" ] ; then
     infoscreendone
 fi
 
+if [ "${SOFTWARE_INSTALL_POSTGRESQL:-}" == "on" ]; then
+    infoscreen "Installing" "postgresql database"
+    . setup/postgresql.sh
+    postgresql_install
+    postgresql_create_role "$USER_ID" "$USER_PASSWORD"
+    infoscreendone
+    STR="${WHITE}Postgresql \nDefault user : ${USER_ID}\nDefault password : same as user password"
+    MSGBOX+=($STR)
+fi
+
+if [ "${SOFTWARE_INSTALL_MYSQL:-}" == "on" ]; then
+    infoscreen "Installing" "mysql database"
+    . setup/mysql.sh
+    mysql_install
+    mysql_set_user_password "root" "$USER_PASSWORD"
+    infoscreendone
+    STR="${WHITE}Mysql \nDefault username : root \nDefault password : same as user password for ${USER_ID}"
+    MSGBOX+=($STR)
+fi
+
 infoscreen "Setting" "bash stuff for root - $OS version $OS_VER"
 case $OS in
 'Debian GNU/Linux'|'Ubuntu')
@@ -135,5 +159,7 @@ infoscreendone
 
 for i in "${MSGBOX[@]}"
 do
-    printf "$i"
+    printf "************************************************************************\n"
+    printf "$i\n"
+    printf "************************************************************************\n\n"
 done

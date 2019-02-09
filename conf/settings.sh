@@ -23,14 +23,17 @@ USER_SHELL="/bin/bash"
 ###################################################################################
 # SSHD settings
 ###################################################################################
-SSHD_PERMITROOTLOGIN="off"
-SSHD_PASSWORDAUTH="off"
+# SSHD_PERMITROOTLOGIN="no" # option yes|no
+# SSHD_PASSWORDAUTH="no" # option yes|no
 
 ###################################################################################
 # Software
 ###################################################################################
 #SOFTWARE_INSTALL_NGINX="on" # option on|off
 #SOFTWARE_INSTALL_AJENTI="on" # option on|off
+#SOFTWARE_INSTALL_DB="on" # option on|off
+    #SOFTWARE_INSTALL_POSTGRESQL="on" # option on|off
+    #SOFTWARE_INSTALL_MYSQL="off" # option on|off
 
 ###################################################################################
 # NGINX SETTINGS

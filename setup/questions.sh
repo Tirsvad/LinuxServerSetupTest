@@ -8,6 +8,15 @@
 : ${DIALOG_ITEM_HELP=4}
 : ${DIALOG_ESC=255}
 
+[ -z "${SSHD_PERMITROOTLOGIN:-}" ] && SSHD_PERMITROOTLOGIN=no
+[ -z "${SSHD_PASSWORDAUTH:-}" ] && SSHD_PASSWORDAUTH=no
+
+[ -z "${SOFTWARE_INSTALL_NGINX:-}" ] && SOFTWARE_INSTALL_NGINX=off
+[ -z "${SOFTWARE_INSTALL_AJENTI:-}" ] && SOFTWARE_INSTALL_AJENTI=off
+[ -z "${SOFTWARE_INSTALL_DB:-}" ] && SOFTWARE_INSTALL_DB=off
+[ -z "${SOFTWARE_INSTALL_MYSQL:-}" ] && SOFTWARE_INSTALL_MYSQL=off
+[ -z "${SOFTWARE_INSTALL_POSTGRESQL:-}" ] && SOFTWARE_INSTALL_POSTGRESQL=off
+
 # Create a temporary file and make sure it goes away when we're dome
 tmp_file=$(tempfile 2>/dev/null) || tmp_file=/tmp/test$$
 trap "rm -f $tmp_file" 0 1 2 5 15
@@ -85,18 +94,18 @@ function ask_new_user {
 }
 
 function ask_secure_sshd {
-    [ -z "${SSHD_PERMITROOTLOGIN:-}" ] && SSHD_PERMITROOTLOGIN=off
-    [ -z "${SSHD_PASSWORDAUTH:-}" ] && SSHD_PASSWORDAUTH=off
+    local permitrootlogin="off"
+    local passwordauth="off"
+    [ "$SSHD_PERMITROOTLOGIN" == "yes"  ] && permitrootlogin="on"
+    [ "$SSHD_PASSWORDAUTH" == "yes"  ] && passwordauth="on"
+
     dialog --backtitle "Secure Management" --title "Set sshd settings" --ok-label "submit" --separate-output \
     --checklist "Make your SSH secure. Please don't change unless" 0 0 0 \
-    "SSHD_PERMITROOTLOGIN" "Permit root login" $SSHD_PERMITROOTLOGIN \
-    "SSHD_PASSWORDAUTH" "Password authentication" $SSHD_PASSWORDAUTH \
+    "SSHD_PERMITROOTLOGIN" "Permit root login" $permitrootlogin \
+    "SSHD_PASSWORDAUTH" "Password authentication" $passwordauth \
     2> $tmp_file
 
     return_value=$?
-
-    SSHD_PERMITROOTLOGIN=no
-    SSHD_PASSWORDAUTH=no
 
     case $return_value in
     $DIALOG_OK)
@@ -126,12 +135,11 @@ function ask_secure_sshd {
 }
 
 function ask_software_install {
-    [ -z "${SOFTWARE_INSTALL_NGINX:-}" ] && SOFTWARE_INSTALL_NGINX=off
-    [ -z "${SOFTWARE_INSTALL_AJENTI:-}" ] && SOFTWARE_INSTALL_AJENTI=off
     dialog --backtitle "Software Management" --ok-label "submit" --separate-output \
     --checklist "Which software to install" 0 0 0 \
     "NGINX" "Webserver" $SOFTWARE_INSTALL_NGINX \
     "Ajenti" "Alternativ Cpanel" $SOFTWARE_INSTALL_AJENTI \
+    "Database" "We ask for which DB later" $SOFTWARE_INSTALL_DB \
     2> $tmp_file
 
     return_value=$?
@@ -146,8 +154,45 @@ function ask_software_install {
             "Ajenti" )
             SOFTWARE_INSTALL_AJENTI=on
             ;;
+            "Database" )
+            SOFTWARE_INSTALL_DB=on
+            ;;
             esac
         done < $tmp_file
+        ;;
+    $DIALOG_CANCEL)
+        echo "Cancel pressed."
+        exit;;
+    $DIALOG_ESC)
+        if test -s $tmp_file ; then
+        cat $tmp_file
+        else
+        echo "ESC pressed."
+        fi
+        exit;;
+    esac
+}
+
+function ask_software_db {
+    dialog --backtitle "Software Management" --ok-label "submit" \
+    --radiolist "Which databse to install" 0 0 0 \
+    "Postgresql" "" $SOFTWARE_INSTALL_POSTGRESQL \
+    "Mysql" "" $SOFTWARE_INSTALL_MYSQL \
+    2> $tmp_file
+
+    return_value=$?
+
+    case $return_value in
+    $DIALOG_OK)
+        local result=`cat $tmp_file`
+        case $result in
+            "Postgresql" )
+            SOFTWARE_INSTALL_POSTGRESQL=on
+            ;;
+            "Mysql" )
+            SOFTWARE_INSTALL_MYSQL=on
+            ;;
+        esac
         ;;
     $DIALOG_CANCEL)
         echo "Cancel pressed."
@@ -217,36 +262,36 @@ if [ -z "${DEFAULT_PRIMARY_HOSTNAME:-}" ]; then
     DEFAULT_PRIMARY_HOSTNAME=$DEFAULT_DOMAIN_GUESS
 fi
 
-if [ -z "${NONINTERACTIVE:-}" ]; then
-    if [ ! -f /usr/bin/dialog ] || [ ! -f /usr/bin/python3 ] || [ ! -f /usr/bin/pip3 ]; then
-        infoscreen "Installing" "packages needed for setup"
-        hide_output apt-get -q -q update
-        apt_get_quiet install dialog python3 python3-pip  || exit 1
-        infoscreendone
-    fi
+if [ ! -f /usr/bin/dialog ] || [ ! -f /usr/bin/python3 ] || [ ! -f /usr/bin/pip3 ]; then
+    infoscreen "Installing" "packages needed for setup"
+    hide_output apt-get -q -q update
+    apt_get_quiet install dialog python3 python3-pip  || exit 1
+    infoscreendone
+fi
 
+dialog --title "Linux server setup" \
+--msgbox \
+"Hello and thanks for deploying the Linux Server Setup Script
+\n\nI'm going to ask you a few questions.
+\n\nNOTE: You should only install this on a brand new Debian or combatible distrobution installation." 0 0
+
+ask_hostname
+get_ip
+
+while ask_new_user
+do
     dialog --title "Linux server setup" \
     --msgbox \
-    "Hello and thanks for deploying the Linux Server Setup Script
-    \n\nI'm going to ask you a few questions.
-    \n\nNOTE: You should only install this on a brand new Debian or combatible distrobution installation." 0 0
+    "Password did not match" 0 0
+done
 
-    ask_hostname
-    get_ip
+ask_secure_sshd
+ask_software_install
 
-    while ask_new_user
-    do
-        dialog --title "Linux server setup" \
-        --msgbox \
-        "Password did not match" 0 0
-    done
+[ $SOFTWARE_INSTALL_DB == "on" ] && ask_software_db
 
-    ask_secure_sshd
-    ask_software_install
-
-    if [ -z "${LETSENCRYPT_EMAIL:-}" ]; then
-        if [ "$SOFTWARE_INSTALL_NGINX"=="on" ] || [ "$SOFTWARE_INSTALL_AJENTI"=="on" ]; then
-            ask_ssl_setup
-        fi
+if [ -z "${LETSENCRYPT_EMAIL:-}" ]; then
+    if [ "$SOFTWARE_INSTALL_NGINX"=="on" ] || [ "$SOFTWARE_INSTALL_AJENTI"=="on" ]; then
+        ask_ssl_setup
     fi
 fi
