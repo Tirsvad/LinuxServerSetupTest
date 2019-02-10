@@ -2,10 +2,35 @@
 
 . setup/sslcertificate.sh
 
+# Setting default values
+[ -z "${SSHD_PASSWORDAUTH:-}" ] && SSHD_PASSWORDAUTH=no
+[ -z "${SSHD_PERMITROOTLOGIN:-}" ] && SSHD_PERMITROOTLOGIN=no
+
+# If the machine is behind a NAT, inside a VM, etc., it may not know
+# its IP address on the public network / the Internet. Ask the Internet
+# and possibly confirm with user.
+if [ -z "${PUBLIC_IP:-}" ]; then
+    # Ask the Internet.
+    GUESSED_IP=$(get_publicip_from_web_service 4)
+
+    if [[ -z "${DEFAULT_PUBLIC_IP:-}" && ! -z "${GUESSED_IP:-}" ]]; then
+        PUBLIC_IP=$GUESSED_IP
+    fi
+fi
+
+if [ -z "${PUBLIC_IPV6:-}" ]; then
+    # Ask the Internet.
+    GUESSED_IPV6=$(get_publicip_from_web_service 6)
+
+    if [[ -z "${DEFAULT_PUBLIC_IPV6:-}" && ! -z "${GUESSED_IPV6:-}" ]]; then
+        PUBLIC_IPV6=$GUESSED_IPV6
+    fi
+fi
+
 [ ! "${NONINTERACTIVE:-}" == "yes" ] && . setup/questions.sh || {
     # check if all GLOBALS is set
     [ ! -z "${USER_ID:-}" ] && [ ! -z "${USER_PASSWORD:-}" ] || { echo "User credential not set in config file"; exit 1; }
-    [ ! "${SSHD_PASSWORDAUTH:-}" == "yes" ] && [ -z "${USER_SSHKEY:-}" ] && { echo -e "Global varible USER_SSHKEY not set in config file.\nBut required as no password is acceptet for login"; exit 1; }
+    [ ! "$SSHD_PASSWORDAUTH" == "yes" ] && [ -z "${USER_SSHKEY:-}" ] && { echo -e "Global varible USER_SSHKEY not set in config file.\nBut required as no password is acceptet for login"; exit 1; }
 }
 
 printf "\n\n"
@@ -49,7 +74,7 @@ if  [ ! $USEREXIST -eq 0  ]; then
         chmod 0600 "$USER_HOME/.ssh/authorized_keys"
     fi
     infoscreendone
-    if [ $SSHD_PASSWORDAUTH == "no" ] && [ -z ${USER_SSHKEY:-} ]; then
+    if [ ! "$SSHD_PASSWORDAUTH" == "yes" ] && [ -z ${USER_SSHKEY:-} ]; then
     dialog --title "copy client " \
         --colors \
         --msgbox \
@@ -80,7 +105,7 @@ infoscreen "installing" "firewall"
     hide_output ufw --force enable
 infoscreendone
 
-if [ "$SOFTWARE_INSTALL_AJENTI" == "on" ]; then
+if [ "${SOFTWARE_INSTALL_AJENTI:-}" == "on" ]; then
     infoscreen "installing" "Ajenti control panel"
     case $OS in
     "Debian GNU/Linux")
@@ -161,7 +186,7 @@ infoscreendone
 
 for i in "${MSGBOX[@]}"
 do
-    printf "${WHITE}************************************************************************\n"
+    printf "${WHITE}------------------------------------------------------------------------\n"
     printf "$i\n"
-    printf "${WHITE}************************************************************************\n\n"
+    printf "${WHITE}------------------------------------------------------------------------\n\n"
 done

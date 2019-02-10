@@ -234,29 +234,6 @@ function ask_ssl_setup {
     esac
 }
 
-function get_ip {
-    # If the machine is behind a NAT, inside a VM, etc., it may not know
-    # its IP address on the public network / the Internet. Ask the Internet
-    # and possibly confirm with user.
-    if [ -z "${PUBLIC_IP:-}" ]; then
-        # Ask the Internet.
-        GUESSED_IP=$(get_publicip_from_web_service 4)
-
-        if [[ -z "${DEFAULT_PUBLIC_IP:-}" && ! -z "${GUESSED_IP:-}" ]]; then
-            PUBLIC_IP=$GUESSED_IP
-        fi
-    fi
-
-    if [ -z "${PUBLIC_IPV6:-}" ]; then
-        # Ask the Internet.
-        GUESSED_IPV6=$(get_publicip_from_web_service 6)
-
-        if [[ -z "${DEFAULT_PUBLIC_IPV6:-}" && ! -z "${GUESSED_IPV6:-}" ]]; then
-            PUBLIC_IPV6=$GUESSED_IPV6
-        fi
-    fi
-}
-
 if [ -z "${DEFAULT_PRIMARY_HOSTNAME:-}" ]; then
     DEFAULT_DOMAIN_GUESS=$(echo $(get_default_hostname) | sed -e 's/^ebox\.//')
     DEFAULT_PRIMARY_HOSTNAME=$DEFAULT_DOMAIN_GUESS
@@ -276,7 +253,6 @@ dialog --title "Linux server setup" \
 \n\nNOTE: You should only install this on a brand new Debian or combatible distrobution installation." 0 0
 
 ask_hostname
-get_ip
 
 while ask_new_user
 do
