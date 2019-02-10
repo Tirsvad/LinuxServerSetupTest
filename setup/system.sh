@@ -1,15 +1,16 @@
 #!/bin/bash
 
 . setup/sslcertificate.sh
-. setup/nginx.sh
 
-if [ -z "${NONINTERACTIVE:-}" ]; then
-    . setup/questions.sh
-fi
+[ ! "${NONINTERACTIVE:-}" == "yes" ] && . setup/questions.sh || {
+    # check if all GLOBALS is set
+    [ ! -z "${USER_ID:-}" ] && [ ! -z "${USER_PASSWORD:-}" ] || { echo "User credential not set in config file"; exit 1; }
+    [ ! "${SSHD_PASSWORDAUTH:-}" == "yes" ] && [ -z "${USER_SSHKEY:-}" ] && { echo -e "Global varible USER_SSHKEY not set in config file.\nBut required as no password is acceptet for login"; exit 1; }
+}
 
 printf "\n\n"
 
-if [[ ! -z "${PRIMARY_HOSTNAME:-}" ]]; then
+if [ ! -z "${PRIMARY_HOSTNAME:-}" ]; then
     infoscreen "Setting" "hostname ${PRIMARY_HOSTNAME}"
     # First set the hostname in the configuration file, then activate the setting
     hostnamectl set-hostname $PRIMARY_HOSTNAME
@@ -110,6 +111,7 @@ fi
 
 if [ "${SOFTWARE_INSTALL_NGINX:-}" == "on" ]; then
     infoscreen "Installing" "nginx Webserver"
+    . setup/nginx.sh
     apt_get_quiet install nginx python-certbot-nginx
 
     mkdir -p /var/www/letsencrypt/.well-known/acme-challenge

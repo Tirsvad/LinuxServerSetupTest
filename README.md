@@ -1,8 +1,17 @@
 # LinuxServerSetup
-
-## Script for setting up a complete server system
-Debian or compatible distribution
-
+## Description
+This script aimed goal is to set up a complete web server environment.\
+Optional LEMP / LAMP. Web application as optional.
+### Requirement
+Debain or Ubuntu fresh install
+## Installation
+Get it and run it
+```
+wget --no-check-certificate https://api.github.com/repos/TirsvadCMS/LinuxServerSetup/tarball/master
+tar xpvf master -C "LinuxServerSetup" --strip-components=1
+cd LinuxServerSetup
+bash setup/start.sh
+```
 ## Features
 * Optional database Postgresql and Mysql
 * Optional control panel Ajenti
@@ -18,17 +27,6 @@ Debian or compatible distribution
   * Automatic configure based on choices made
 * Setting hostname
 * Update system software
-
-### Installation
-Get it and run it
-
-```
-wget --no-check-certificate https://api.github.com/repos/TirsvadCMS/LinuxServerSetup/tarball/master
-tar xpvf master -C "LinuxServerSetup" --strip-components=1
-cd LinuxServerSetup
-bash setup/start.sh
-```
-
 ### TODO
 1. Optional web application
   * django
@@ -38,7 +36,6 @@ bash setup/start.sh
   * spam filter
   * anti virus
   * easy add email via web tool
-
 ### Development
-Want to contribute? Great!
+Want to contribute? Great!\
 Find us [here](https://github.com/TirsvadCMS/LinuxServerSetup/)

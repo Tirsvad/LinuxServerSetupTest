@@ -49,6 +49,11 @@ USER_SHELL="/bin/bash"
 #LETSENCRYPT_EMAIL=''
 
 ###################################################################################
+# Setup based on this config file witho interaction
+###################################################################################
+#NONINTERACTIVE=yes
+
+###################################################################################
 # WARNING hardcore settings
 # Please don't uncomment this unless you know what it does
 ###################################################################################
