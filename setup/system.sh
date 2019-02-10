@@ -48,14 +48,14 @@ if  [ ! $USEREXIST -eq 0  ]; then
         chmod 0600 "$USER_HOME/.ssh/authorized_keys"
     fi
     infoscreendone
-    if [ $SSHD_PASSWORDAUTH == "off" ] && [ -z ${USER_SSHKEY:-} ]; then
+    if [ $SSHD_PASSWORDAUTH == "no" ] && [ -z ${USER_SSHKEY:-} ]; then
     dialog --title "copy client " \
         --colors \
         --msgbox \
 "Done on client side now before we securing server\n
 \Z4ssh-copy-id $USER_ID@$PUBLIC_IP\n
 \n\Z0NOTE: Be sure the client side have openssh\n
-\Z4sudo apt-get install openssh-server" 0 0
+\Z4sudo apt-get install openssh-client" 0 0
     fi
 else
     infoscreenfailed
@@ -159,7 +159,7 @@ infoscreendone
 
 for i in "${MSGBOX[@]}"
 do
-    printf "************************************************************************\n"
+    printf "${WHITE}************************************************************************\n"
     printf "$i\n"
-    printf "************************************************************************\n\n"
+    printf "${WHITE}************************************************************************\n\n"
 done

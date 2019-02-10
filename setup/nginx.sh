@@ -1,13 +1,15 @@
 #!/bin/bash
 
 function nginx_create_site {
-    domain=${1:-}
-    rootPath=${2:-}
-    sitesEnablePath='/etc/nginx/sites-enabled/'
-    sitesAvailablePath='/etc/nginx/sites-available/'
-    baseWwwPath='/var/www/'
-    publicPath="public/"
-    indexhtml="index.html"
+    local domain=${1:-}
+    local rootPath=${2:-}
+    local sitesEnablePath='/etc/nginx/sites-enabled/'
+    local sitesAvailablePath='/etc/nginx/sites-available/'
+    local baseWwwPath='/var/www/'
+    local publicPath="public/"
+    local indexhtml="index.html"
+
+    [ -e /etc/nginx/sites-enabled/default ] && rm /etc/nginx/sites-enabled/default
 
     maindomain=$(sed -e 's|^[^/]*//||' -e 's|/.*$||' <<< ${domain%/*})
     path=$(sed 's/.*\.\(.*\..*\)/\1/' <<< ${maindomain%/*})

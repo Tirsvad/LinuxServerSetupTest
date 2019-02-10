@@ -4,8 +4,9 @@
 Debian or compatible distribution
 
 ## Features
-* Option add Ajenti control panel
-* Option add NGINX webserver
+* Optional database Postgresql and Mysql
+* Optional control panel Ajenti
+* Optional webserver NGINX
   * Default use SSL certificate (letsencrypt)
 * Create a privileged user
   * option add ssh-key
@@ -29,12 +30,11 @@ bash setup/start.sh
 ```
 
 ### TODO
-1. Optional Sql server
-  * Postgresql
-2. Optional webserver
+1. Optional web application
   * django
-  * uwsgi
-3. Optional e-mail server
+  * weblate
+  * pgadmin
+2. Optional e-mail server
   * spam filter
   * anti virus
   * easy add email via web tool

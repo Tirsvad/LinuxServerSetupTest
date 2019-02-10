@@ -40,7 +40,7 @@ USER_SHELL="/bin/bash"
 ###################################################################################
 #NGINX_SITES_AVAILABE='/etc/nginx/sites-available/'
 #NGINX_SITES_ENABLE='/etc/nginx/sites-enabled/'
-NGINX_HTML_BASE_DIR='/var/html'
+#NGINX_HTML_BASE_DIR='/var/www/html'
 #NGINX_SITES_HOSTNAMES=('example.com' 'blog.example.com') # Only used for extra host names. Privamy hostname is by default set to be hosted by nginx.
 
 ###################################################################################
