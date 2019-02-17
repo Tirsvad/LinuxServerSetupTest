@@ -331,7 +331,4 @@ ASALocalRun/
 
 myprivate/
 .vscode/
-.gitattributes
 LinuxServerSetup.sln
-.gitmodules
-.github/
