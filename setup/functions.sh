@@ -12,59 +12,22 @@ BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 WHITE='\033[0;37m'
 
-function hide_output {
-    # This function hides the output of a command unless the command fails
-	# and returns a non-zero exit code.
-
-    # Get a temporary file.
-    OUTPUT=$(tempfile)
-
-
-    # Execute command, redirecting stderr/stdout to the temporary file.
-    # Since we check the return code ourselves, disable 'set -e' temporarily.
-    set +e
-    $@ &> $OUTPUT
-    E=$?
-    set -e
-
-    # If the command failed, show the output that was captured in the temporary file.
-    if [ $E != 0 ]; then
-        echo
-        echo FAILED: $@
-        echo -----------------------------------------
-        cat $OUTPUT
-        echo -----------------------------------------
-        exit $E
-    fi
-
-	# Remove temporary file.
-	rm -f $OUTPUT
+infoscreen() {
+	printf "%-.80s" $(printf "${BROWN}$1 ${BLUE}$2 : .................................................................................${NC}") 1>&3
 }
 
-function infoscreen {
-	printf "%-.70s" $(printf "${BROWN}$1 ${BLUE}$2 : ......................................................................${NC}")
+infoscreendone() {
+	printf " ${GREEN}DONE${NC}\n" 1>&3
 }
 
-function infoscreendone {
-	printf " ${GREEN}DONE${NC}\n"
-}
-
-function infoscreenfailed {
-	printf " ${RED}FAILED${NC}\n"
-}
-
-############################################################
-## Apt functions
-############################################################
-function apt_get_quiet {
-	# Run apt-get in a totally non-interactive mode.
-	DEBIAN_FRONTEND=noninteractive hide_output apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" "$@"
+infoscreenfailed() {
+	printf " ${RED}FAILED${NC}\n" 1>&3
 }
 
 ############################################################
 ## System tools
 ############################################################
-function get_default_hostname {
+get_default_hostname() {
 	# Guess the machine's hostname. It should be a fully qualified
 	# domain name suitable for DNS. None of these calls may provide
 	# the right value, but it's the best guess we can make.
@@ -75,7 +38,7 @@ function get_default_hostname {
 }
 
 ## Uncapitalize a string
-function lower {
+lower() {
 	# $1 required a string
     # return an uncapitalize string
     if [ ! -n ${1:-} ]; then
@@ -86,34 +49,60 @@ function lower {
 	echo $1 | tr '[:upper:]' '[:lower:]'
 }
 
-function get_publicip_from_web_service {
+get_publicip_from_web_service() {
     curl -$1 --fail --silent --max-time 15 icanhazip.com 2>/dev/null || /bin/true
 }
 
-function system_get_user_home {
+system_get_user_home() {
 	# $1 required a user name
     # return user hame path
 	cat /etc/passwd | grep "^$1:" | cut --delimiter=":" -f6
 }
 
 ## Delete domain in /etc/hosts
-function hostname_delete {
+hostname_delete() {
 	# $1 required a domain name
     if [ ! -n ${1:-} ]; then
         echo "hostname_delete() requires the domain name as the first argument"
         return 1;
     fi
-
     if [ -z "$1" ]; then
         local newhost=${1//./\\.}
         sed -i "/$newhost/d" /etc/hosts
     fi
 }
 
+install_package() {
+    case $OS in
+    "Debian GNU/Linux"|"Ubuntu")
+        apt-get -qq install "$@"
+        ;;
+    "CentOS Linux")
+        yum -y install "$@"
+        ;;
+    esac
+    # [ $(which dnf) ] && { dnf install "$@"; return 0; }
+    # echo "Can't find package installer when installing $@" | tee /dev/fd/3
+    # exit 1
+}
+
+install_package_upgrade() {
+    case $OS in
+    "Debian GNU/Linux"|"Ubuntu")
+        apt-get -qq update
+        apt-get -qq upgrade
+        ;;
+    "CentOS Linux")
+        yum -y update
+        ;;
+    esac
+    #[ $(which dnf) ] && { dnf upgrade --refresh; return 0; }
+}
+
 ############################################################
 ## Net tools
 ############################################################
-function kill_prosses_port() {
+kill_prosses_port() {
     ## kill prosses that is listen to port number
     # $1 required a port number
     kill $(fuser -n tcp $1 2> /dev/null)
@@ -122,7 +111,7 @@ function kill_prosses_port() {
 ############################################################
 ## Param tools
 ############################################################
-function update_param_boolean {
+update_param_boolean() {
 	# $1 required a file path
 	# $2 required a search term
 	# $3 required a boolean value
@@ -151,7 +140,7 @@ function update_param_boolean {
 	esac
 }
 
-function update_param {
+update_param() {
 	# $1 required a file path
 	# $2 required a search term
 	# $3 required a string to replace
@@ -167,6 +156,5 @@ function update_param {
         echo "comment_param() requires a string value as the third argument"
         return 1;
     fi
-
 	grep -q $2 $1 && sed -i "s/^#*\($2\).*/$3 $2/g" $1 || echo "$3 $2 #added by TirsvadCMS LinuxServerSetupScript" >> $1
 }

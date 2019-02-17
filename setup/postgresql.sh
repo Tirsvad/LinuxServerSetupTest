@@ -12,8 +12,8 @@ function postgresql_create_role {
     [ -z ${1:-} ] && { echo "Missing user name as argument" >&2; exit 1; }
     [ -z ${2:-} ] && { echo "Missing user password as argument" >&2; exit 1; }
     cd /
-    hide_output su postgres bash -c "psql -c \"CREATE USER $1 WITH PASSWORD '$2';\""
-    hide_output cd -
+    su postgres bash -c "psql -c \"CREATE USER $1 WITH PASSWORD '$2';\""
+    cd -
 }
 
 function postgresql_create_db {
@@ -28,6 +28,6 @@ function postgresql_grant_all_privileges {
     #$1 db user
     #$2 db name
     cd /
-    hide_output su postgres bash -c "psql -c \"GRANT ALL PRIVILEGES ON DATABASE $2 to $1;\""
-    hide_output cd -
+    su postgres bash -c "psql -c \"GRANT ALL PRIVILEGES ON DATABASE $2 to $1;\""
+    cd -
 }

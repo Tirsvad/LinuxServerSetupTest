@@ -31,7 +31,7 @@ function ask_hostname {
     \n\nWe recommend that the name be a subdomain of the domain in your email address, so we're suggesting $DEFAULT_PRIMARY_HOSTNAME.
     \n\nYou can change it.
     \n\nHostname:" \
-    0 0 $PRIMARY_HOSTNAME 2> $tmp_file
+    0 0 $PRIMARY_HOSTNAME 2>$tmp_file 1>&3
 
     return_value=$?
 
@@ -60,7 +60,7 @@ function ask_new_user {
     "Password:" 2 1 "${USER_PASSWORD:-}" 2 10 25 0 1\
     "Password retype:" 3 1 "${USER_PASSWORD:-}" 3 10 25 0 1\
     "shell:" 4 1 "${USER_SHELL:-}" 4 10 25 0 0\
-    2> $tmp_file
+    2>$tmp_file 1>&3
 
     return_value=$?
 
@@ -103,7 +103,7 @@ function ask_secure_sshd {
     --checklist "Make your SSH secure. Please don't change unless" 0 0 0 \
     "SSHD_PERMITROOTLOGIN" "Permit root login" $permitrootlogin \
     "SSHD_PASSWORDAUTH" "Password authentication" $passwordauth \
-    2> $tmp_file
+    2>$tmp_file 1>&3
 
     return_value=$?
 
@@ -140,7 +140,7 @@ function ask_software_install {
     "NGINX" "Webserver" $SOFTWARE_INSTALL_NGINX \
     "Ajenti" "Alternativ Cpanel" $SOFTWARE_INSTALL_AJENTI \
     "Database" "We ask for which DB later" $SOFTWARE_INSTALL_DB \
-    2> $tmp_file
+    2>$tmp_file 1>&3
 
     return_value=$?
 
@@ -178,7 +178,7 @@ function ask_software_db {
     --radiolist "Which databse to install" 0 0 0 \
     "Postgresql" "" $SOFTWARE_INSTALL_POSTGRESQL \
     "Mysql" "" $SOFTWARE_INSTALL_MYSQL \
-    2> $tmp_file
+    2>$tmp_file 1>&3
 
     return_value=$?
 
@@ -213,7 +213,7 @@ function ask_ssl_setup {
     "We need to ensure safe connection between webserver and client. So we setting a SSL connection up.
     \n\nPlease insert an email adress used for issue about the SSL certificate.
     \n\nEmail:" \
-    0 0 "" 2> $tmp_file
+    0 0 "" 2> $tmp_file 1>&3
 
     return_value=$?
 
@@ -240,9 +240,8 @@ if [ -z "${DEFAULT_PRIMARY_HOSTNAME:-}" ]; then
 fi
 
 if [ ! -f /usr/bin/dialog ] || [ ! -f /usr/bin/python3 ] || [ ! -f /usr/bin/pip3 ]; then
-    infoscreen "Installing" "packages needed for setup"
-    hide_output apt-get -q -q update
-    apt_get_quiet install dialog python3 python3-pip  || exit 1
+    infoscreen "Installing" "packages needed for Dialog"
+    install_package dialog || exit 1
     infoscreendone
 fi
 
@@ -250,7 +249,7 @@ dialog --title "Linux server setup" \
 --msgbox \
 "Hello and thanks for deploying the Linux Server Setup Script
 \n\nI'm going to ask you a few questions.
-\n\nNOTE: You should only install this on a brand new Debian or combatible distrobution installation." 0 0
+\n\nNOTE: You should only install this on a brand new Debian or combatible distrobution installation." 0 0 1>&3
 
 ask_hostname
 
@@ -258,7 +257,7 @@ while ask_new_user
 do
     dialog --title "Linux server setup" \
     --msgbox \
-    "Password did not match" 0 0
+    "Password did not match" 0 0 1>&3
 done
 
 ask_secure_sshd

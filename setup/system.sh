@@ -1,7 +1,5 @@
 #!/bin/bash
 
-. setup/sslcertificate.sh
-
 # Setting default values
 [ -z "${SSHD_PASSWORDAUTH:-}" ] && SSHD_PASSWORDAUTH=no
 [ -z "${SSHD_PERMITROOTLOGIN:-}" ] && SSHD_PERMITROOTLOGIN=no
@@ -18,14 +16,14 @@ if [ -z "${PUBLIC_IP:-}" ]; then
     fi
 fi
 
-if [ -z "${PUBLIC_IPV6:-}" ]; then
+[ -z "${PUBLIC_IPV6:-}" ] && {
     # Ask the Internet.
     GUESSED_IPV6=$(get_publicip_from_web_service 6)
 
     if [[ -z "${DEFAULT_PUBLIC_IPV6:-}" && ! -z "${GUESSED_IPV6:-}" ]]; then
         PUBLIC_IPV6=$GUESSED_IPV6
     fi
-fi
+}
 
 [ ! "${NONINTERACTIVE:-}" == "yes" ] && . setup/questions.sh || {
     # check if all GLOBALS is set
@@ -33,20 +31,29 @@ fi
     [ ! "$SSHD_PASSWORDAUTH" == "yes" ] && [ -z "${USER_SSHKEY:-}" ] && { echo -e "Global varible USER_SSHKEY not set in config file.\nBut required as no password is acceptet for login"; exit 1; }
 }
 
-printf "\n\n"
-
-if [ ! -z "${PRIMARY_HOSTNAME:-}" ]; then
+[ ! -z "${PRIMARY_HOSTNAME:-}" ] && {
     infoscreen "Setting" "hostname ${PRIMARY_HOSTNAME}"
     # First set the hostname in the configuration file, then activate the setting
     hostnamectl set-hostname $PRIMARY_HOSTNAME
     cp /etc/hosts /etc/hosts.backup
     update_param "/etc/hosts" ${PRIMARY_HOSTNAME} "127.0.0.1"
     infoscreendone
-fi
+}
 
 infoscreen "Updating" "System and software"
-hide_output apt-get update
-apt_get_quiet upgrade
+case $OS in
+"Debian GNU/Linux")
+    install_package_upgrade
+    ;;
+"Ubuntu")
+    install_package_upgrade
+    ;;
+"CentOS Linux")
+    install_package epel-release
+    install_package centos-release-scl
+    install_package_upgrade
+    ;;
+esac
 infoscreendone
 
 infoscreen "Adding" "priviliged user ${USER_ID}"
@@ -56,32 +63,43 @@ USEREXIST=$?
 set -e
 if  [ ! $USEREXIST -eq 0  ]; then
     USER_ID=`lower $USER_ID`
-    hide_output useradd --create-home -s "$USER_SHELL" "$USER_ID"
+    useradd --create-home -s "$USER_SHELL" "$USER_ID"
     echo "$USER_ID:$USER_PASSWORD" | chpasswd
-    hide_output which sudo
+    which sudo
     if [ ! $? -eq 0 ]; then
-        apt_get_quiet install sudo
+        install_package install sudo
     fi
-    hide_output adduser "$USER_ID" sudo
+    case $OS in
+    "Debian GNU/Linux")
+        adduser "$USER_ID" sudo
+        ;;
+    "Ubuntu")
+        adduser "$USER_ID" sudo
+        ;;
+    "CentOS Linux")
+        usermod -aG wheel "$USER_ID"
+        ;;
+    esac
     USER_HOME=`system_get_user_home "$USER_ID"`
     if [ ! -d "$USER_HOME/.ssh" ]; then
         # Control will enter here if $DIRECTORY doesn't exist.
-        hide_output sudo -u "$USER_ID" mkdir "$USER_HOME/.ssh"
+        sudo -u "$USER_ID" mkdir "$USER_HOME/.ssh"
     fi
-    hide_output sudo -u "$USER_ID" touch "$USER_HOME/.ssh/authorized_keys"
+    sudo -u "$USER_ID" touch "$USER_HOME/.ssh/authorized_keys"
     if [ ! -z ${USER_SSHKEY:-} ]; then
         sudo -u "$USER_ID" echo "$USER_SSHKEY" >> "$USER_HOME/.ssh/authorized_keys"
         chmod 0600 "$USER_HOME/.ssh/authorized_keys"
     fi
     infoscreendone
     if [ ! "$SSHD_PASSWORDAUTH" == "yes" ] && [ -z ${USER_SSHKEY:-} ]; then
+    [ $(which apt-get) ] && INFO="apt-get" || [ $(which dnf) ] && INFO="dnf" || [ $(which yum) ] && INFO="yum"
     dialog --title "copy client " \
         --colors \
         --msgbox \
 "Done on client side now before we securing server\n
 \Z4ssh-copy-id $USER_ID@$PUBLIC_IP\n
 \n\Z0NOTE: Be sure the client side have openssh\n
-\Z4sudo apt-get install openssh-client" 0 0
+\Z4sudo $INFO install openssh-client" 0 0 1>&3
     fi
 else
     infoscreenfailed
@@ -94,77 +112,110 @@ systemctl reload sshd
 infoscreendone
 
 infoscreen "installing" "fail2ban"
-    apt_get_quiet install fail2ban
+install_package install fail2ban
+systemctl enable fail2ban
 infoscreendone
 
 infoscreen "installing" "firewall"
-    apt_get_quiet install ufw
-    hide_output ufw default deny incoming
-    hide_output ufw default allow outgoing
-    hide_output ufw allow ssh
-    hide_output ufw --force enable
+case $OS in
+"Debian GNU/Linux"|"Ubuntu")
+    install_package install ufw
+    ufw default deny incoming
+    ufw default allow outgoing
+    ufw allow ssh
+    ufw --force enable
+    ;;
+"CentOS Linux")
+    ;;
+esac
 infoscreendone
 
-if [ "${SOFTWARE_INSTALL_AJENTI:-}" == "on" ]; then
+[ "${SOFTWARE_INSTALL_AJENTI:-}" == "on" ] && {
     infoscreen "installing" "Ajenti control panel"
     case $OS in
     "Debian GNU/Linux")
-        hide_output apt-key adv --fetch-keys http://repo.ajenti.org/debian/key
+        apt-key adv --fetch-keys http://repo.ajenti.org/debian/key
         echo "deb http://repo.ajenti.org/debian main main debian" >> /etc/apt/sources.list.d/ajenti.list
+        install_package_upgrade
+        install_package ajenti
+        systemctl start ajenti
+        install_package build-essential python-pip python-dev python-lxml libffi-dev libssl-dev libjpeg-dev libpng-dev uuid-dev python-dbus
+        systemctl enable ajenti
+        systemctl restart ajenti
+        ufw allow 8000
         ;;
     "Ubuntu")
-        apt_get_quiet -y install wget
-        apt_get_quiet install python python-pil
-        hide_output apt-key adv --fetch-keys http://repo.ajenti.org/debian/key
-        hide_output wget http://security.ubuntu.com/ubuntu/pool/universe/p/pillow/python-imaging_4.1.1-3build2_all.deb
-        hide_output dpkg -i python-imaging_4.1.1-3build2_all.deb
+        install_package wget
+        install_package python python-pil
+        apt-key adv --fetch-keys http://repo.ajenti.org/debian/key
+        wget http://security.ubuntu.com/ubuntu/pool/universe/p/pillow/python-imaging_4.1.1-3build2_all.deb
+        dpkg -i python-imaging_4.1.1-3build2_all.deb
         echo "deb http://repo.ajenti.org/ng/debian main main ubuntu" >> /etc/apt/sources.list.d/ajenti.list
+        install_package_upgrade
+        install_package ajenti
+        systemctl start ajenti
+        install_package build-essential python-pip python-dev python-lxml libffi-dev libssl-dev libjpeg-dev libpng-dev uuid-dev python-dbus
+        systemctl enable ajenti
+        systemctl restart ajenti
+        ufw allow 8000
+        ;;
+    "CentOS Linux")
+        [[ $(yum list | grep ajenti-repo) ]] || rpm -Uvh http://repo.ajenti.org/ajenti-repo-1.0-1.noarch.rpm # check if repo esist else get it
+        [[ $(yum list installed ajenti) ]] || install_package ajenti # check if package is installed else install it
+        firewall-cmd --permanent --zone=public --add-port=8000/tcp
+        firewall-cmd --reload
+        systemctl enable ajenti
+        systemctl restart ajenti
         ;;
     esac
-    hide_output apt-get update
-    apt_get_quiet install ajenti
-    hide_output systemctl start ajenti
-    apt_get_quiet install build-essential python-pip python-dev python-lxml libffi-dev libssl-dev libjpeg-dev libpng-dev uuid-dev python-dbus
-    hide_output pip install ajenti-panel ajenti.plugin.dashboard ajenti.plugin.settings ajenti.plugin.plugins
-    hide_output systemctl enable ajenti
-    hide_output systemctl restart ajenti
-    hide_output ufw allow 8000
     STR="${WHITE}Ajenti will listen on HTTPS port 8000 by default \nDefault username : root \nDefault password : admin\nhttps://${PUBLIC_IP}:8000"
     MSGBOX+=($STR)
     infoscreendone
-fi
+}
 
-if [ "${SOFTWARE_INSTALL_NGINX:-}" == "on" ]; then
+[ "${SOFTWARE_INSTALL_NGINX:-}" == "on" ] && {
     infoscreen "Installing" "nginx Webserver"
-    . setup/nginx.sh
-    apt_get_quiet install nginx python-certbot-nginx
-
-    mkdir -p /var/www/letsencrypt/.well-known/acme-challenge
-
-    hide_output systemctl enable nginx
-    hide_output systemctl start nginx
-
-    hide_output ufw allow "nginx full"
-
-    nginx_create_site $PRIMARY_HOSTNAME ${NGINX_HTML_BASE_DIR:-}
-    for HOSTNAME in "${NGINX_SITES_HOSTNAMES[@]}"
-    do
-        nginx_create_site $HOSTNAME ${NGINX_HTML_BASE_DIR:-}
-    done
+    bash $FILE_TOOLS_NGINX_SETUP install
+    bash $FILE_TOOLS_NGINX_SETUP add --domain $PRIMARY_HOSTNAME --email $LETSENCRYPT_EMAIL
+    [ ! -Z "${NGINX_SITES_HOSTNAMES:-}"] && {
+        for HOSTNAME in "${NGINX_SITES_HOSTNAMES[@]}"
+        do
+            bash $FILE_TOOLS_NGINX_SETUP add --domain $HOSTNAME --email $LETSENCRYPT_EMAIL
+        done
+    }
     infoscreendone
-fi
+}
 
-if [ "${SOFTWARE_INSTALL_POSTGRESQL:-}" == "on" ]; then
+[ "${SOFTWARE_INSTALL_POSTGRESQL:-}" == "on" ] && {
     infoscreen "Installing" "postgresql database"
-    . setup/postgresql.sh
-    postgresql_install
-    postgresql_create_role "$USER_ID" "$USER_PASSWORD"
+    case $OS in
+    "Debian GNU/Linux")
+        install_package postgresql postgresql-contrib
+        systemctl start postgresql
+        systemctl enable postgresql
+        ;;
+    "Ubuntu")
+        install_package postgresql postgresql-contrib
+        systemctl start postgresql
+        systemctl enable postgresql
+        ;;
+    "CentOS Linux")
+        yum -y install postgresql-server postgresql-contrib
+        postgresql-setup initdb
+        systemctl start postgresql
+        systemctl enable postgresql
+        ;;
+    esac
+
+    cd /
+    su postgres bash -c "psql -c \"CREATE USER $USER_ID WITH PASSWORD '$USER_PASSWORD';\""
+    cd -
     infoscreendone
     STR="${WHITE}Postgresql \nDefault user : ${USER_ID}\nDefault password : same as user password"
     MSGBOX+=($STR)
-fi
+}
 
-if [ "${SOFTWARE_INSTALL_MYSQL:-}" == "on" ]; then
+[ "${SOFTWARE_INSTALL_MYSQL:-}" == "on" ] && {
     infoscreen "Installing" "mysql database"
     . setup/mysql.sh
     mysql_install
@@ -172,7 +223,7 @@ if [ "${SOFTWARE_INSTALL_MYSQL:-}" == "on" ]; then
     infoscreendone
     STR="${WHITE}Mysql \nDefault username : root \nDefault password : same as user password for ${USER_ID}"
     MSGBOX+=($STR)
-fi
+}
 
 infoscreen "Setting" "bash stuff for root - $OS version $OS_VER"
 case $OS in
@@ -186,7 +237,7 @@ infoscreendone
 
 for i in "${MSGBOX[@]}"
 do
-    printf "${WHITE}------------------------------------------------------------------------\n"
-    printf "$i\n"
-    printf "${WHITE}------------------------------------------------------------------------\n\n"
+    printf "${WHITE}------------------------------------------------------------------------\n" 1>&3
+    printf "$i\n" 1>&3
+    printf "${WHITE}------------------------------------------------------------------------\n\n" 1>&3
 done
