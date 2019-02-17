@@ -1,0 +1,3 @@
+[submodule "tools/nginx_setup"]
+	path = tools/nginx_setup
+	url = git@github.com:TirsvadCMS-Bashscripts/nginx_setup.git
