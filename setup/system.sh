@@ -67,7 +67,7 @@ if  [ ! $USEREXIST -eq 0  ]; then
     echo "$USER_ID:$USER_PASSWORD" | chpasswd
     which sudo
     if [ ! $? -eq 0 ]; then
-        install_package install sudo
+        install_package sudo
     fi
     case $OS in
     "Debian GNU/Linux")
@@ -112,14 +112,14 @@ systemctl reload sshd
 infoscreendone
 
 infoscreen "installing" "fail2ban"
-install_package install fail2ban
+install_package fail2ban
 systemctl enable fail2ban
 infoscreendone
 
 infoscreen "installing" "firewall"
 case $OS in
 "Debian GNU/Linux"|"Ubuntu")
-    install_package install ufw
+    install_package ufw
     ufw default deny incoming
     ufw default allow outgoing
     ufw allow ssh
