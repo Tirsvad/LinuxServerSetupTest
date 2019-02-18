@@ -56,6 +56,21 @@ case $OS in
 esac
 infoscreendone
 
+infoscreen "installing" "firewall"
+case $OS in
+"Debian GNU/Linux"|"Ubuntu")
+    install_package ufw
+    ufw default deny incoming
+    ufw default allow outgoing
+    ufw allow ssh
+    ufw --force enable
+    ;;
+"CentOS Linux")
+    # centos is already with firewall
+    ;;
+esac
+infoscreendone
+
 infoscreen "Adding" "priviliged user ${USER_ID}"
 set +e
 id "${USER_ID}" >/dev/null 2>&1
@@ -114,20 +129,6 @@ infoscreendone
 infoscreen "installing" "fail2ban"
 install_package fail2ban
 systemctl enable fail2ban
-infoscreendone
-
-infoscreen "installing" "firewall"
-case $OS in
-"Debian GNU/Linux"|"Ubuntu")
-    install_package ufw
-    ufw default deny incoming
-    ufw default allow outgoing
-    ufw allow ssh
-    ufw --force enable
-    ;;
-"CentOS Linux")
-    ;;
-esac
 infoscreendone
 
 [ "${SOFTWARE_INSTALL_AJENTI:-}" == "on" ] && {
@@ -200,7 +201,7 @@ infoscreendone
         systemctl enable postgresql
         ;;
     "CentOS Linux")
-        yum -y install postgresql-server postgresql-contrib
+        install_package postgresql-server postgresql-contrib
         postgresql-setup initdb
         systemctl start postgresql
         systemctl enable postgresql
