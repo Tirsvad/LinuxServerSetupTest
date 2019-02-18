@@ -60,6 +60,7 @@ infoscreen "installing" "firewall"
 case $OS in
 "Debian GNU/Linux"|"Ubuntu")
     install_package ufw
+    ufw logging off
     ufw default deny incoming
     ufw default allow outgoing
     ufw allow ssh
