@@ -25,7 +25,7 @@ fi
     fi
 }
 
-[ ! "${NONINTERACTIVE:-}" == "yes" ] && . setup/questions.sh || {
+[ ! "${NONINTERACTIVE:-}" == "yes" ] && . $DIR/questions.sh || {
     # check if all GLOBALS is set
     [ ! -z "${USER_ID:-}" ] && [ ! -z "${USER_PASSWORD:-}" ] || { echo "User credential not set in config file"; exit 1; }
     [ ! "$SSHD_PASSWORDAUTH" == "yes" ] && [ -z "${USER_SSHKEY:-}" ] && { echo -e "Global varible USER_SSHKEY not set in config file.\nBut required as no password is acceptet for login"; exit 1; }
@@ -43,6 +43,7 @@ fi
 infoscreen "Updating" "System and software"
 case $OS in
 "Debian GNU/Linux")
+    apt-mark hold linux-image-4.9.0-8-amd64 # Bug in updated debain kernel image.
     install_package_upgrade
     ;;
 "Ubuntu")
@@ -66,7 +67,7 @@ case $OS in
     ufw --force enable
     ;;
 "CentOS Linux")
-    # centos is already with firewall
+    # centos is already with a easy firewall
     ;;
 esac
 infoscreendone
@@ -136,7 +137,7 @@ infoscreendone
     case $OS in
     "Debian GNU/Linux")
         apt-key adv --fetch-keys http://repo.ajenti.org/debian/key
-        echo "deb http://repo.ajenti.org/debian main main debian" >> /etc/apt/sources.list.d/ajenti.list
+        echo "deb http://repo.ajenti.org/debian main main debian" 1>&3 >> /etc/apt/sources.list.d/ajenti.list
         install_package_upgrade
         install_package ajenti
         systemctl start ajenti
@@ -151,7 +152,7 @@ infoscreendone
         apt-key adv --fetch-keys http://repo.ajenti.org/debian/key
         wget http://security.ubuntu.com/ubuntu/pool/universe/p/pillow/python-imaging_4.1.1-3build2_all.deb
         dpkg -i python-imaging_4.1.1-3build2_all.deb
-        echo "deb http://repo.ajenti.org/ng/debian main main ubuntu" >> /etc/apt/sources.list.d/ajenti.list
+        echo "deb http://repo.ajenti.org/ng/debian main main ubuntu" 1>&3 >> /etc/apt/sources.list.d/ajenti.list
         install_package_upgrade
         install_package ajenti
         systemctl start ajenti
@@ -235,6 +236,13 @@ case $OS in
 ;;
 esac
 infoscreendone
+
+case $OS in
+'Debian GNU/Linux')
+    apt-mark unhold linux-image-4.9.0-8-amd64
+    install_package_upgrade
+    ;;
+esac
 
 for i in "${MSGBOX[@]}"
 do
