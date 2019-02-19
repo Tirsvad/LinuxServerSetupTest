@@ -135,6 +135,7 @@ infoscreendone
     infoscreen "installing" "Ajenti control panel"
     case $OS in
     "Debian GNU/Linux")
+        install_package dirmngr
         apt-key adv --fetch-keys http://repo.ajenti.org/debian/key
         echo "deb http://repo.ajenti.org/debian main main debian" 1>&3 >> /etc/apt/sources.list.d/ajenti.list
         install_package_upgrade
@@ -146,6 +147,7 @@ infoscreendone
         ufw allow 8000
         ;;
     "Ubuntu")
+        install_package dirmngr
         install_package wget
         install_package python python-pil
         apt-key adv --fetch-keys http://repo.ajenti.org/debian/key
