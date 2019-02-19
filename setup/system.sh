@@ -40,23 +40,6 @@ fi
     infoscreendone
 }
 
-infoscreen "Updating" "System and software"
-case $OS in
-"Debian GNU/Linux")
-    apt-mark hold linux-image-4.9.0-8-amd64 # Bug in updated debain kernel image.
-    install_package_upgrade
-    ;;
-"Ubuntu")
-    install_package_upgrade
-    ;;
-"CentOS Linux")
-    install_package epel-release
-    install_package centos-release-scl
-    install_package_upgrade
-    ;;
-esac
-infoscreendone
-
 infoscreen "installing" "firewall"
 case $OS in
 "Debian GNU/Linux"|"Ubuntu")
@@ -68,6 +51,22 @@ case $OS in
     ;;
 "CentOS Linux")
     # centos is already with a easy firewall
+    ;;
+esac
+infoscreendone
+
+infoscreen "Updating" "System and software"
+case $OS in
+"Debian GNU/Linux")
+    install_package_upgrade
+    ;;
+"Ubuntu")
+    install_package_upgrade
+    ;;
+"CentOS Linux")
+    install_package epel-release
+    install_package centos-release-scl
+    install_package_upgrade
     ;;
 esac
 infoscreendone
@@ -236,13 +235,6 @@ case $OS in
 ;;
 esac
 infoscreendone
-
-case $OS in
-'Debian GNU/Linux')
-    apt-mark unhold linux-image-4.9.0-8-amd64
-    install_package_upgrade
-    ;;
-esac
 
 for i in "${MSGBOX[@]}"
 do
