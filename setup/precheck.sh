@@ -35,10 +35,3 @@ if [ -z "${OS_COMBATIBLE:-}" ] || [ "${OS_COMBATIBLE:-}" ]; then
         ;;
     esac
 fi
-
-if [ ! -f /usr/bin/dialog ] || [ ! -f /usr/bin/python3 ] || [ ! -f /usr/bin/pip3 ] || [ ! -f /usr/bin/dirmngr ]; then
-    infoscreen "Installing" "packages needed for setup"
-    install_package_upgrade
-    #install_package install dialog python3 python3-pip dirmngr || exit 1
-    infoscreendone
-fi
