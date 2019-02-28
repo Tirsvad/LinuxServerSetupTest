@@ -179,6 +179,19 @@ infoscreendone
 [ "${SOFTWARE_INSTALL_NGINX:-}" == "on" ] && {
     infoscreen "Installing" "nginx Webserver"
     bash $FILE_TOOLS_NGINX_SETUP install
+    case $OS in
+    "Debian GNU/Linux")
+        ufw allow 'Nginx Full'
+        ;;
+    "Ubuntu")
+        ufw allow 'Nginx Full'
+        ;;
+    "CentOS Linux")
+        firewall-cmd --add-service=http --permanent
+        firewall-cmd --add-service=https --permanent
+        firewall-cmd --reload
+        ;;
+    esac
     bash $FILE_TOOLS_NGINX_SETUP add --domain $PRIMARY_HOSTNAME --email $LETSENCRYPT_EMAIL
     [ ! -Z "${NGINX_SITES_HOSTNAMES:-}"] && {
         for HOSTNAME in "${NGINX_SITES_HOSTNAMES[@]}"
